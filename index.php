@@ -35,8 +35,8 @@ try {
 
                         $keyboard = new InlineKeyboardMarkup([
                             [
-                                ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-                                ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"],
+                                ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
+                                ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"],
                             ]
                         ]);
                         $bot->sendMessage($chat_id, $server, null, false, null, $keyboard);
@@ -49,8 +49,8 @@ try {
 
                     $keyboard = new InlineKeyboardMarkup([
                         [
-                            ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-                            ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"]
+                            ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
+                            ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
                         ]
                     ]);
                     $bot->editMessageText($chat_id, $message->getMessageId(), $serverList, null, false, $keyboard);
@@ -120,8 +120,8 @@ try {
 
                 $keyboard = new InlineKeyboardMarkup([
                     [
-                        ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-                        ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"]
+                        ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
+                        ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
                     ]
                 ]);
 
