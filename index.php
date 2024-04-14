@@ -1,6 +1,8 @@
 <?php
 
 use TelegramBot\Api\Client;
+use TelegramBot\Api\Types\CallbackQuery;
+use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 use TelegramBot\Api\Types\Update;
 
 require_once "vendor/autoload.php";
@@ -9,7 +11,7 @@ const TOKEN_REG_RU = '847ff2a5ad1a03f4a61c33c4e7afad8db2a051eca0b7a25ac73d4402d6
 const TG_BOT_TOKEN = '6953285920:AAHC5E5ejYrQ9Tu2y-pQEKPn0zzVPB61sK0';
 const URL = 'https://api.cloudvps.reg.ru/v1/reglets';
 
-function handleMessageCallback(Client $bot, \TelegramBot\Api\Types\CallbackQuery $callback)
+function handleMessageCallback(Client $bot, CallbackQuery $callback)
 {
     $message = $callback->getMessage();
     $chat_id = $message->getChat()->getId();
@@ -25,7 +27,7 @@ function handleMessageCallback(Client $bot, \TelegramBot\Api\Types\CallbackQuery
                     // Извлекаем ID сервера из строки
                     $serverId = extractServerIdFromCallbackData($server);
 
-                    $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+                    $keyboard = new InlineKeyboardMarkup([
                         [
                             ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
                             ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"],
@@ -38,7 +40,7 @@ function handleMessageCallback(Client $bot, \TelegramBot\Api\Types\CallbackQuery
                 // Извлекаем ID сервера из строки
                 $serverId = extractServerIdFromCallbackData($serverList);
 
-                $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+                $keyboard = new InlineKeyboardMarkup([
                     [
                         ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
                         ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"]
@@ -59,7 +61,7 @@ function handleMessageCallback(Client $bot, \TelegramBot\Api\Types\CallbackQuery
             preg_match('/Имя сервера: (.+)/', reset($serverInfo), $names);
             $serverName = $names[1] ?? 'не найден';
 
-            $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+            $keyboard = new InlineKeyboardMarkup([
                 [
                     ['text' => "Все сервера", 'callback_data' => 'all_servers']
                 ]
@@ -77,7 +79,7 @@ function handleMessageCallback(Client $bot, \TelegramBot\Api\Types\CallbackQuery
             preg_match('/Имя сервера: (.+)/', reset($serverInfo), $names);
             $serverName = $names[1] ?? 'не найден';
 
-            $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+            $keyboard = new InlineKeyboardMarkup([
                 [
                     ['text' => "Все сервера", 'callback_data' => 'all_servers']
                 ]
@@ -97,7 +99,7 @@ try {
         sendStartMessage($bot, $message);
     });
 
-    $bot->callbackQuery(function (\TelegramBot\Api\Types\CallbackQuery $callback) use ($bot) {
+    $bot->callbackQuery(function (CallbackQuery $callback) use ($bot) {
         handleMessageCallback($bot, $callback);
     });
 
