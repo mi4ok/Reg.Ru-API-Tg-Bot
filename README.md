@@ -3,3 +3,7 @@
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
 
 https://api.telegram.org/bot{BotToken}/setWebhook?url=https://example.ru/index.php
+
+![img.png](img/img1.png)
+
+![img.png](img/img.png)
