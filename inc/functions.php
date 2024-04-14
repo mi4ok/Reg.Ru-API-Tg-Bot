@@ -1,5 +1,8 @@
 <?php
 
+use TelegramBot\Api\Client;
+use TelegramBot\Api\Types\Update;
+
 /**
  * Обрабатывает запрос на удаление сервера.
  *
@@ -95,4 +98,35 @@ function handleServerListRequest(string $token, string $link): string
 function extractServerIdFromCallbackData(string $callback_data) {
     preg_match('/_(\d+)$/', $callback_data, $matches);
     return $matches[1] ?? null;
+}
+
+/**
+ * Обрабатывает стандартное сообщение.
+ *
+ * @param Client $bot Объект клиента Telegram Bot API.
+ * @param Update $update Объект обновления Telegram.
+ */
+function handleDefaultMessage(Client $bot, Update $update)
+{
+    $message = $update->getMessage();
+    $chatId = $message->getChat()->getId();
+    $text = $message->getText();
+    $bot->sendMessage($chatId, 'Ваше сообщение: ' . $text);
+}
+
+/**
+ * Отправляет стартовое сообщение с клавиатурой.
+ *
+ * @param Client $bot Объект клиента Telegram Bot API.
+ * @param mixed $message Сообщение, на основе которого будет отправлен ответ.
+ */
+function sendStartMessage(Client $bot, $message)
+{
+    $toMessage = 'Привет. Бот для управления своими серверами Reg.Ru.';
+    $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+        [
+            ['text' => "Все сервера", 'callback_data' => 'all_servers']
+        ]
+    ]);
+    $bot->sendMessage($message->getChat()->getId(), $toMessage, null, false, null, $keyboard);
 }

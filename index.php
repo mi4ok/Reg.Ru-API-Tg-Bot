@@ -1,4 +1,8 @@
 <?php
+
+use TelegramBot\Api\Client;
+use TelegramBot\Api\Types\Update;
+
 require_once "vendor/autoload.php";
 require_once "inc/functions.php";
 const TOKEN_REG_RU = '847ff2a5ad1a03f4a61c33c4e7afad8db2a051eca0b7a25ac73d4402d653a09d4e5667f77eaf3268b6881e780142381a';
@@ -6,16 +10,10 @@ const TG_BOT_TOKEN = '6953285920:AAHC5E5ejYrQ9Tu2y-pQEKPn0zzVPB61sK0';
 const URL = 'https://api.cloudvps.reg.ru/v1/reglets';
 
 try {
-    $bot = new \TelegramBot\Api\Client(TG_BOT_TOKEN);
+    $bot = new Client(TG_BOT_TOKEN);
 
     $bot->command('start', function ($message) use ($bot) {
-        $toMessage = 'Привет. Бот для управления своими серверами Reg.Ru.';
-        $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
-            [
-                ['text' => "Все сервера", 'callback_data' => 'all_servers']
-            ]
-        ]);
-        $bot->sendMessage($message->getChat()->getId(), $toMessage, null, false, null, $keyboard);
+        sendStartMessage($bot, $message);
     });
 
     $bot->callbackQuery(function (\TelegramBot\Api\Types\CallbackQuery $callback) use ($bot) {
@@ -98,10 +96,8 @@ try {
         }
     });
 
-    $bot->on(function (\TelegramBot\Api\Types\Update $update) use ($bot) {
-        $message = $update->getMessage();
-        $id = $message->getChat()->getId();
-        $bot->sendMessage($id, 'Ваше сообщение: ' . $message->getText());
+    $bot->on(function (Update $update) use ($bot) {
+        handleDefaultMessage($bot, $update);
     }, function () {
         return true;
     });
