@@ -6,9 +6,8 @@ use TelegramBot\Api\Types\Update;
 
 require_once "vendor/autoload.php";
 require_once "inc/functions.php";
-const TOKEN_REG_RU = 'YOU_REG_RU_TOKEN';
-const TG_BOT_TOKEN = 'YOU_TG_BOT_TOKEN';
-const URL = 'https://api.cloudvps.reg.ru/v1/reglets';
+require_once "inc/config.php";
+
 
 try {
     $bot = new Client(TG_BOT_TOKEN);
