@@ -1,75 +1,9 @@
 <?php
 require_once "vendor/autoload.php";
-
+require_once "inc/functions.php";
 const TOKEN_REG_RU = '847ff2a5ad1a03f4a61c33c4e7afad8db2a051eca0b7a25ac73d4402d653a09d4e5667f77eaf3268b6881e780142381a';
 const TG_BOT_TOKEN = '6953285920:AAHC5E5ejYrQ9Tu2y-pQEKPn0zzVPB61sK0';
 const URL = 'https://api.cloudvps.reg.ru/v1/reglets';
-
-function handleServerDeleteRequest($serverId, $token, $link) {
-    $url = $link . '/' . $serverId;
-    $options = [
-        'http' => [
-            'header'  => "Authorization: Bearer $token\r\n" .
-                "Content-Type: application/json\r\n",
-            'method'  => 'DELETE'
-        ]
-    ];
-
-    $context  = stream_context_create($options);
-    $response = file_get_contents($url, false, $context);
-
-    return $response;
-}
-
-function handleServerReboot($serverId, $token, $link) {
-    $url = $link . '/' . $serverId . '/actions';
-    $data = json_encode(['type' => 'reboot']);
-
-    $options = [
-        'http' => [
-            'header'  => "Content-Type: application/json\r\n" .
-                "Authorization: Bearer $token\r\n",
-            'method'  => 'POST',
-            'content' => $data
-        ]
-    ];
-
-    $context  = stream_context_create($options);
-    $response = file_get_contents($url, false, $context);
-
-    return $response;
-}
-
-function handleServerListRequest($token, $link): string
-{
-    if (empty($token) || empty($link)) {
-        return 'Не указан токен или ссылка на API.';
-    }
-
-    $response = file_get_contents($link, false, stream_context_create([
-        'http' => [
-            'header'  => "Content-Type: application/json\r\n" .
-                "Authorization: Bearer $token\r\n"
-        ]
-    ]));
-
-    $responseArray = json_decode($response, true);
-
-    if (isset($responseArray['reglets'])) {
-        $serverList = $responseArray['reglets'];
-        $message = '';
-        foreach ($serverList as $server) {
-            $message .= "ID: {$server['id']}\n";
-            $message .= "Имя сервера: {$server['name']}\n";
-            $message .= "Статус: {$server['status']}\n";
-            $message .= "IP-адрес: {$server['ip']}\n\n";
-        }
-        return $message;
-    } else {
-        return 'Не удалось получить список серверов.';
-    }
-}
-
 
 try {
     $bot = new \TelegramBot\Api\Client(TG_BOT_TOKEN);
