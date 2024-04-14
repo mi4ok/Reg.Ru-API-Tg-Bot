@@ -237,3 +237,28 @@ function confirmServerAction(Client $bot, string $serverList, int $serverId, int
     }
     handleServerReboot($serverId, TOKEN_REG_RU, URL);
 }
+
+/**
+ * Отменяет действия с сервером и отображает доступные действия.
+ *
+ * @param Client $bot Объект клиента для работы с API бота.
+ * @param int $serverId Идентификатор сервера.
+ * @param int $chatId Идентификатор чата.
+ * @param int $idMessage Идентификатор сообщения.
+ * @param string $serverList Список серверов в формате строки.
+ * @return void
+ */
+function canceledServerActions(Client $bot, int $serverId, int $chatId, int $idMessage, string $serverList)
+{
+    $serverInfo = preg_grep("/ID: $serverId/", explode("\n\n", $serverList));
+
+    $keyboard = new InlineKeyboardMarkup([
+        [
+            ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
+            ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
+        ]
+    ]);
+
+    // Отправляем информацию только о выбранном сервере
+    $bot->editMessageText($chatId, $idMessage, reset($serverInfo), null, false, $keyboard);
+}

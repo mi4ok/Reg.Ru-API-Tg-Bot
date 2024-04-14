@@ -2,7 +2,6 @@
 
 use TelegramBot\Api\Client;
 use TelegramBot\Api\Types\CallbackQuery;
-use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 use TelegramBot\Api\Types\Update;
 
 require_once "vendor/autoload.php";
@@ -42,14 +41,12 @@ try {
 
             case (bool)preg_match('/^confirm_delete_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                // Получаем информацию о серверах
                 $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
                 confirmServerAction($bot, $serverList, $serverId, $chatId, $idMessage, 'delete');
                 break;
 
             case (bool)preg_match('/^confirm_reload_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                // Получаем информацию о серверах
                 $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
                 confirmServerAction($bot, $serverList, $serverId, $chatId, $idMessage, 'reload');
                 break;
@@ -57,22 +54,12 @@ try {
             case (bool)preg_match('/^cancel_delete_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
                 $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                // Извлекаем информацию о конкретном сервере
-                $serverInfo = preg_grep("/ID: $serverId/", explode("\n\n", $serverList));
+                canceledServerActions($bot, $serverId, $chatId, $idMessage, $serverList);
 
-                $keyboard = new InlineKeyboardMarkup([
-                    [
-                        ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-                        ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
-                    ]
-                ]);
-
-                // Отправляем информацию только о выбранном сервере
-                $bot->editMessageText($chatId, $idMessage, reset($serverInfo), null, false, $keyboard);
                 break;
 
             default:
-                $bot->sendMessage($chatId, 'Неизвестная опция' . $callback_data);
+                $bot->sendMessage($chatId, 'Неизвестная опция: ' . $callback_data);
         }
     });
 
