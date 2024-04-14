@@ -2,6 +2,7 @@
 
 use TelegramBot\Api\Client;
 use TelegramBot\Api\Types\Update;
+use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 
 /**
  * Обрабатывает запрос на удаление сервера.
@@ -90,17 +91,6 @@ function handleServerListRequest(string $token, string $link): string
 }
 
 /**
- * Извлекает идентификатор сервера из данных обратного вызова.
- *
- * @param string $callback_data Данные обратного вызова.
- * @return string|null Идентификатор сервера или null, если не удалось извлечь.
- */
-function extractServerIdFromCallbackData(string $callback_data) {
-    preg_match('/_(\d+)$/', $callback_data, $matches);
-    return $matches[1] ?? null;
-}
-
-/**
  * Обрабатывает стандартное сообщение.
  *
  * @param Client $bot Объект клиента Telegram Bot API.
@@ -129,4 +119,31 @@ function sendStartMessage(Client $bot, $message)
         ]
     ]);
     $bot->sendMessage($message->getChat()->getId(), $toMessage, null, false, null, $keyboard);
+}
+
+/**
+ * Отправляет список серверов в виде сообщений с кнопками действий.
+ *
+ * @param Client $bot       Объект клиента для отправки сообщений
+ * @param int    $chatId    Идентификатор чата, куда отправляется список серверов
+ * @param string $serverList Список серверов в формате строки
+ *
+ * @return void
+ */
+function pushServersList(Client $bot, int $chatId, string $serverList)
+{
+    $servers = explode("\n\n", $serverList);
+    foreach ($servers as $server) {
+        preg_match('/ID: (\d+)/', $server, $matches);
+        $serverId = $matches[1] ?? null;
+
+        $keyboard = new InlineKeyboardMarkup([
+            [
+                ['text' => "🔄 Перезагрузить $serverId", 'callback_data' => "reload_server_$serverId"],
+                ['text' => "❌ Удалить $serverId", 'callback_data' => "delete_server_$serverId"]
+            ]
+        ]);
+
+        $bot->sendMessage($chatId, $server, null, false, null, $keyboard);
+    }
 }
