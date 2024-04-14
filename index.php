@@ -31,8 +31,6 @@ try {
                     $servers = explode("\n\n", $serverList);
                     foreach ($servers as $server) {
                         // Извлекаем ID сервера из строки
-                        //preg_match('/ID: (\d+)/', $server, $matches);
-                        //$serverId = $matches[1] ?? null;
                         $serverId = extractServerIdFromCallbackData($server);
 
                         $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
@@ -46,8 +44,6 @@ try {
                 } else {
                     // Если только один сервер, отправляем его в единственном сообщении
                     // Извлекаем ID сервера из строки
-                    //preg_match('/ID: (\d+)/', $serverList, $matches);
-                    //$serverId = $matches[1] ?? null;
                     $serverId = extractServerIdFromCallbackData($serverList);
 
                     $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
@@ -62,7 +58,6 @@ try {
                 break;
 
             case (bool)preg_match('/^reload_server_(\d+)$/', $callback_data, $matches):
-                //$serverId = $matches[1];
                 $serverId = extractServerIdFromCallbackData($callback_data);
                 // Получаем информацию о серверах
                 $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
