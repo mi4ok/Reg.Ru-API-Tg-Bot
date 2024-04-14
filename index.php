@@ -31,16 +31,14 @@ try {
                     $servers = explode("\n\n", $serverList);
                     foreach ($servers as $server) {
                         // Извлекаем ID сервера из строки
-                        preg_match('/ID: (\d+)/', $server, $matches);
-                        $serverId = $matches[1] ?? null;
+                        //preg_match('/ID: (\d+)/', $server, $matches);
+                        //$serverId = $matches[1] ?? null;
+                        $serverId = extractServerIdFromCallbackData($server);
 
                         $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
                             [
                                 ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
                                 ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"],
-                                [
-                                    ['text' => "Все сервера", 'callback_data' => "all_servers"],
-                                ]
                             ]
                         ]);
                         $bot->sendMessage($chat_id, $server, null, false, null, $keyboard);
@@ -48,16 +46,14 @@ try {
                 } else {
                     // Если только один сервер, отправляем его в единственном сообщении
                     // Извлекаем ID сервера из строки
-                    preg_match('/ID: (\d+)/', $serverList, $matches);
-                    $serverId = $matches[1] ?? null;
+                    //preg_match('/ID: (\d+)/', $serverList, $matches);
+                    //$serverId = $matches[1] ?? null;
+                    $serverId = extractServerIdFromCallbackData($serverList);
 
                     $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
                         [
                             ['text' => "Перезагрузить", 'callback_data' => "reload_server_$serverId"],
                             ['text' => "Удалить", 'callback_data' => "delete_server_$serverId"]
-                        ],
-                        [
-                            ['text' => "Все сервера", 'callback_data' => "all_servers"],
                         ]
                     ]);
                     $bot->editMessageText($chat_id, $message->getMessageId(), $serverList, null, false, $keyboard);
@@ -66,7 +62,8 @@ try {
                 break;
 
             case (bool)preg_match('/^reload_server_(\d+)$/', $callback_data, $matches):
-                $serverId = $matches[1];
+                //$serverId = $matches[1];
+                $serverId = extractServerIdFromCallbackData($callback_data);
                 // Получаем информацию о серверах
                 $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
                 // Извлекаем информацию о конкретном сервере

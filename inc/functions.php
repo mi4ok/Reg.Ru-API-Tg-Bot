@@ -1,5 +1,15 @@
 <?php
-function handleServerDeleteRequest($serverId, $token, $link) {
+
+/**
+ * Обрабатывает запрос на удаление сервера.
+ *
+ * @param int $serverId Идентификатор сервера для удаления.
+ * @param string $token Токен для аутентификации.
+ * @param string $link Ссылка на API сервера.
+ * @return string Результат запроса на удаление.
+ */
+function handleServerDeleteRequest(int $serverId, string $token, string $link): string
+{
     $url = $link . '/' . $serverId;
     $options = [
         'http' => [
@@ -10,12 +20,19 @@ function handleServerDeleteRequest($serverId, $token, $link) {
     ];
 
     $context  = stream_context_create($options);
-    $response = file_get_contents($url, false, $context);
-
-    return $response;
+    return file_get_contents($url, false, $context);
 }
 
-function handleServerReboot($serverId, $token, $link) {
+/**
+ * Обрабатывает запрос на перезагрузку сервера.
+ *
+ * @param int $serverId Идентификатор сервера для перезагрузки.
+ * @param string $token Токен для аутентификации.
+ * @param string $link Ссылка на API сервера.
+ * @return string Результат запроса на перезагрузку.
+ */
+function handleServerReboot(int $serverId, string $token, string $link): string
+{
     $url = $link . '/' . $serverId . '/actions';
     $data = json_encode(['type' => 'reboot']);
 
@@ -29,12 +46,17 @@ function handleServerReboot($serverId, $token, $link) {
     ];
 
     $context  = stream_context_create($options);
-    $response = file_get_contents($url, false, $context);
-
-    return $response;
+    return file_get_contents($url, false, $context);
 }
 
-function handleServerListRequest($token, $link): string
+/**
+ * Обрабатывает запрос на перезагрузку сервера.
+ *
+ * @param string $token Токен для аутентификации.
+ * @param string $link Ссылка на API сервера.
+ * @return string Результат запроса на перезагрузку.
+ */
+function handleServerListRequest(string $token, string $link): string
 {
     if (empty($token) || empty($link)) {
         return 'Не указан токен или ссылка на API.';
@@ -62,4 +84,15 @@ function handleServerListRequest($token, $link): string
     } else {
         return 'Не удалось получить список серверов.';
     }
+}
+
+/**
+ * Извлекает идентификатор сервера из данных обратного вызова.
+ *
+ * @param string $callback_data Данные обратного вызова.
+ * @return string|null Идентификатор сервера или null, если не удалось извлечь.
+ */
+function extractServerIdFromCallbackData(string $callback_data) {
+    preg_match('/_(\d+)$/', $callback_data, $matches);
+    return $matches[1] ?? null;
 }
