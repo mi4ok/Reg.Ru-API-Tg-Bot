@@ -1,38 +1,40 @@
 <?php
 require_once "vendor/autoload.php";
-const TOKEN_REG_RU = '847ff2a5ad1a03f4a61c33c4e7afad8db2a051eca0b7a25ac73d4402d653a09d4e5667f77eaf3268b6881e780142381a';
-function handleServerReboot($serverId, $token) {
-    $url = 'https://api.cloudvps.reg.ru/v1/reglets/' . $serverId . '/actions';
 
+const TOKEN_REG_RU = '847ff2a5ad1a03f4a61c33c4e7afad8db2a051eca0b7a25ac73d4402d653a09d4e5667f77eaf3268b6881e780142381a';
+const URL = 'https://api.cloudvps.reg.ru/v1/reglets';
+
+function handleServerReboot($serverId, $token, $link) {
+    $url = $link . '/' . $serverId . '/actions';
     $data = json_encode(['type' => 'reboot']);
 
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $token,
-        'Content-Type: application/json'
-    ]);
+    $options = [
+        'http' => [
+            'header'  => "Content-Type: application/json\r\n" .
+                "Authorization: Bearer $token\r\n",
+            'method'  => 'POST',
+            'content' => $data
+        ]
+    ];
 
-    $response = curl_exec($ch);
-    curl_close($ch);
+    $context  = stream_context_create($options);
+    $response = file_get_contents($url, false, $context);
 
     return $response;
 }
 
-function handleServerListRequest($token) {
-    $url = 'https://api.cloudvps.reg.ru/v1/reglets';
+function handleServerListRequest($token, $link): string
+{
+    if (empty($token) || empty($link)) {
+        return 'Не указан токен или ссылка на API.';
+    }
 
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $token,
-        'Content-Type: application/json'
-    ]);
-
-    $response = curl_exec($ch);
-    curl_close($ch);
+    $response = file_get_contents($link, false, stream_context_create([
+        'http' => [
+            'header'  => "Content-Type: application/json\r\n" .
+                "Authorization: Bearer $token\r\n"
+        ]
+    ]));
 
     $responseArray = json_decode($response, true);
 
@@ -51,11 +53,22 @@ function handleServerListRequest($token) {
     }
 }
 
+
 try {
     $bot = new \TelegramBot\Api\Client('6953285920:AAHC5E5ejYrQ9Tu2y-pQEKPn0zzVPB61sK0');
 
+    $bot->command('start', function ($message) use ($bot) {
+        $toMessage = 'Привет. Бот для управления своими серверами Reg.Ru.';
+        $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+            [
+                ['text' => "Показать серверы", 'callback_data' => 'all_servers']
+            ]
+        ]);
+        $bot->sendMessage($message->getChat()->getId(), $toMessage, null, false, null, $keyboard);
+    });
+
     $bot->command('ping', function ($message) use ($bot) {
-        $serverList = handleServerListRequest();
+        $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
         $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
             [
                 ['text' => "Перезагрузить", 'callback_data' => 'reload_servers']
@@ -70,15 +83,34 @@ try {
         $callback_data = $callback->getData();
 
         switch ($callback_data) {
+            case 'all_servers':
+                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
+                $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+                    [
+                        ['text' => "Перезагрузить", 'callback_data' => 'reload_servers']
+                    ]
+                ]);
+                $bot->editMessageText($chat_id, $message->getMessageId(), $serverList, null, false, $keyboard);
+                break;
             case 'reload_servers':
-                $serverInfo = handleServerListRequest(); // Получаем информацию о сервере
-                // Извлекаем ID сервера из строки
-                preg_match('/ID: (\d+)/', $serverInfo, $matches);
-                preg_match('/Имя сервера: (.+)/', $serverInfo, $names);
-                $serverId = $matches[1] ?? 'не найден';
-                $serverName = $names[1] ?? 'не найден';
-                $bot->editMessageText($chat_id, $message->getMessageId(), 'Начинаем перезагружать сервер: ' . $serverName);
-                handleServerReboot($serverId, $token);
+                $serverList = handleServerListRequest(TOKEN_REG_RU, URL); // Получаем информацию о серверах
+                $serverArray = explode("\n\n", $serverList); // Разбиваем список серверов по разделителю
+
+                foreach ($serverArray as $serverInfo) {
+                    // Извлекаем ID сервера из строки
+                    preg_match('/ID: (\d+)/', $serverInfo, $matches);
+                    preg_match('/Имя сервера: (.+)/', $serverInfo, $names);
+                    $serverId = $matches[1] ?? 'не найден';
+                    $serverName = $names[1] ?? 'не найден';
+
+                    $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+                        [
+                            ['text' => "Показать серверы", 'callback_data' => 'all_servers']
+                        ]
+                    ]);
+                    $bot->sendMessage($chat_id, 'Начинаем перезагружать сервер: ' . $serverName, null, false, null, $keyboard);
+                    handleServerReboot($serverId, TOKEN_REG_RU, URL);
+                }
                 break;
             default:
                 $bot->sendMessage($chat_id, 'Неизвестная опция');
