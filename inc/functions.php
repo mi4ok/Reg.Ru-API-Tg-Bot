@@ -14,7 +14,8 @@ use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
  */
 function handleServerDelete(int $serverId, string $token, string $link): string
 {
-    $url = $link . '/' . $serverId;
+    $url = sprintf('%s/%d', $link, $serverId);
+
     $options = [
         'http' => [
             'header'  => "Authorization: Bearer $token\r\n" .
@@ -23,7 +24,8 @@ function handleServerDelete(int $serverId, string $token, string $link): string
         ]
     ];
 
-    $context  = stream_context_create($options);
+    $context = stream_context_create($options);
+
     return file_get_contents($url, false, $context);
 }
 
@@ -37,15 +39,14 @@ function handleServerDelete(int $serverId, string $token, string $link): string
  */
 function handleServerReboot(int $serverId, string $token, string $link): string
 {
-    $url = $link . '/' . $serverId . '/actions';
-    $data = json_encode(['type' => 'reboot']);
+    $url = sprintf('%s/%d/actions', $link, $serverId);
 
     $options = [
         'http' => [
             'header'  => "Content-Type: application/json\r\n" .
                 "Authorization: Bearer $token\r\n",
             'method'  => 'POST',
-            'content' => $data
+            'content' => json_encode(['type' => 'reboot'])
         ]
     ];
 
@@ -53,12 +54,13 @@ function handleServerReboot(int $serverId, string $token, string $link): string
     return file_get_contents($url, false, $context);
 }
 
+
 /**
- * Обрабатывает запрос на перезагрузку сервера.
+ * ОТображает список серверов.
  *
  * @param string $token Токен для аутентификации.
  * @param string $link Ссылка на API сервера.
- * @return string Результат запроса на перезагрузку.
+ * @return string Реезультат запроса.
  */
 function handleServerListRequest(string $token, string $link): string
 {
@@ -68,26 +70,21 @@ function handleServerListRequest(string $token, string $link): string
 
     $response = file_get_contents($link, false, stream_context_create([
         'http' => [
-            'header'  => "Content-Type: application/json\r\n" .
-                "Authorization: Bearer $token\r\n"
-        ]
+            'header' => "Content-Type: application/json\r\nAuthorization: Bearer $token\r\n",
+        ],
     ]));
 
-    $responseArray = json_decode($response, true);
+    $responseArray = json_decode($response, true) ?: [];
 
-    if (isset($responseArray['reglets'])) {
-        $serverList = $responseArray['reglets'];
-        $message = '';
-        foreach ($serverList as $server) {
-            $message .= "ID: {$server['id']}\n";
-            $message .= "Имя сервера: {$server['name']}\n";
-            $message .= "Статус: {$server['status']}\n";
-            $message .= "IP-адрес: {$server['ip']}\n\n";
-        }
-        return $message;
-    } else {
-        return 'Не удалось получить список серверов.';
+    $message = '';
+    foreach ($responseArray['reglets'] as $server) {
+        $message .= "ID: {$server['id']}\n";
+        $message .= "Имя сервера: {$server['name']}\n";
+        $message .= "Статус: {$server['status']}\n";
+        $message .= "IP-адрес: {$server['ip']}\n\n";
     }
+
+    return $message ?: 'Не удалось получить список серверов.';
 }
 
 /**
@@ -96,7 +93,7 @@ function handleServerListRequest(string $token, string $link): string
  * @param Client $bot Объект клиента Telegram Bot API.
  * @param Update $update Объект обновления Telegram.
  */
-function handleDefaultMessage(Client $bot, Update $update)
+function handleDefaultMessage(Client $bot, Update $update): void
 {
     $message = $update->getMessage();
     $chatId = $message->getChat()->getId();
@@ -113,7 +110,7 @@ function handleDefaultMessage(Client $bot, Update $update)
 function sendStartMessage(Client $bot, $message)
 {
     $toMessage = 'Привет. Бот для управления своими серверами Reg.Ru.';
-    $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+    $keyboard = new InlineKeyboardMarkup([
         [
             ['text' => "Все сервера", 'callback_data' => 'all_servers']
         ]
