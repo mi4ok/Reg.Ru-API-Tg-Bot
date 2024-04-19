@@ -222,10 +222,10 @@ function confirmServerAction(Client $bot, string $serverList, int $serverId, int
 
     $bot->editMessageText($chatId, $idMessage, $message . ': ' . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, null, false, $keyboard);
     if ($type == 'delete') {
-        // handleServerDelete($serverId, TOKEN_REG_RU, URL);
+        handleServerDelete($serverId, TOKEN_REG_RU, URL);
         return;
     }
-    // handleServerReboot($serverId, TOKEN_REG_RU, URL);
+    handleServerReboot($serverId, TOKEN_REG_RU, URL);
 }
 
 /**
