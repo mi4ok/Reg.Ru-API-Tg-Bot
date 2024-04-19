@@ -54,13 +54,12 @@ function handleServerReboot(int $serverId, string $token, string $link): string
     return file_get_contents($url, false, $context);
 }
 
-
 /**
- * ОТображает список серверов.
+ * Отображает список серверов.
  *
  * @param string $token Токен для аутентификации.
  * @param string $link Ссылка на API сервера.
- * @return string Реезультат запроса.
+ * @return string Результат запроса.
  */
 function handleServerListRequest(string $token, string $link): string
 {
@@ -102,6 +101,37 @@ function handleDefaultMessage(Client $bot, Update $update): void
 }
 
 /**
+ * Возвращает клавиатуру в зависимости от типа действия.
+ *
+ * @param string $typeAction Тип действия.
+ * @param int|null $serverId ID сервера (опционально).
+ * @param string|null $variableAction Дополнительная переменная действия (опционально).
+ * @return InlineKeyboardMarkup|null Клавиатура или null, если тип действия неизвестен.
+ */
+function getKeyboard($typeAction, ?int $serverId = null, ?string $variableAction = null): ?InlineKeyboardMarkup
+{
+    switch ($typeAction) {
+        case 'DeleteOrReloadServer':
+            return new InlineKeyboardMarkup([
+                [['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
+                ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]]
+            ]);
+
+        case 'ConfirmOrCancel':
+            return new InlineKeyboardMarkup([
+                [['text' => "✅ Да", 'callback_data' => "confirm_{$variableAction}_server_$serverId"],
+                ['text' => "❌ Нет", 'callback_data' => "cancel_delete_server_$serverId"]]
+            ]);
+
+        default:
+        case 'AllServers':
+            return new InlineKeyboardMarkup([
+                [['text' => "Все сервера", 'callback_data' => 'all_servers']]
+            ]);
+    }
+}
+
+/**
  * Отправляет стартовое сообщение с клавиатурой.
  *
  * @param Client $bot Объект клиента Telegram Bot API.
@@ -110,11 +140,7 @@ function handleDefaultMessage(Client $bot, Update $update): void
 function sendStartMessage(Client $bot, $message)
 {
     $toMessage = 'Привет. Бот для управления своими серверами Reg.Ru.';
-    $keyboard = new InlineKeyboardMarkup([
-        [
-            ['text' => "Все сервера", 'callback_data' => 'all_servers']
-        ]
-    ]);
+    $keyboard = getKeyboard('AllServers');
     $bot->sendMessage($message->getChat()->getId(), $toMessage, null, false, null, $keyboard);
 }
 
@@ -133,14 +159,7 @@ function pushServersList(Client $bot, int $chatId, string $serverList)
     foreach ($servers as $server) {
         preg_match('/ID: (\d+)/', $server, $matches);
         $serverId = $matches[1] ?? null;
-
-        $keyboard = new InlineKeyboardMarkup([
-            [
-                ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-                ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
-            ]
-        ]);
-
+        $keyboard = getKeyboard('DeleteOrReloadServer', $serverId);
         $bot->sendMessage($chatId, $server, null, false, null, $keyboard);
     }
 }
@@ -158,16 +177,9 @@ function pushServersList(Client $bot, int $chatId, string $serverList)
  */
 function reloadServerChecked(Client $bot, string $serverList, int $serverId, int $chatId, int $idMessage)
 {
-    $serverInfo = preg_grep("/ID: $serverId/", explode("\n\n", $serverList));
-    preg_match('/Имя сервера: (.+)/', reset($serverInfo), $names);
-    $serverName = $names[1] ?? 'не найден';
-
-    $keyboard = new InlineKeyboardMarkup([
-        [
-            ['text' => "✅ Да", 'callback_data' => "confirm_reload_server_$serverId"],
-            ['text' => "❌ Нет", 'callback_data' => "cancel_delete_server_$serverId"],
-        ]
-    ]);
+    preg_match('/ID: ' . $serverId . '\nИмя сервера: (.+)/', $serverList, $matches);
+    $serverName = $matches[1] ?? 'не найден';
+    $keyboard = getKeyboard('ConfirmOrCancel', $serverId, 'reload');
     $bot->editMessageText($chatId, $idMessage, 'Точно хотите перезагрузить сервер? ' . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, null, false, $keyboard);
 }
 
@@ -184,18 +196,9 @@ function reloadServerChecked(Client $bot, string $serverList, int $serverId, int
  */
 function deleteServerChecked(Client $bot, string $serverList, int $serverId, int $chatId, int $idMessage)
 {
-    // Извлекаем информацию о конкретном сервере
-    $serverInfo = preg_grep("/ID: $serverId/", explode("\n\n", $serverList));
-    // Извлекаем имя сервера
-    preg_match('/Имя сервера: (.+)/', reset($serverInfo), $names);
-    $serverName = $names[1] ?? 'не найден';
-
-    $keyboard = new InlineKeyboardMarkup([
-        [
-            ['text' => "✅ Да", 'callback_data' => "confirm_delete_server_$serverId"],
-            ['text' => "❌ Нет", 'callback_data' => "cancel_delete_server_$serverId"],
-        ]
-    ]);
+    preg_match('/ID: ' . $serverId . '\nИмя сервера: (.+)/', $serverList, $matches);
+    $serverName = $matches[1] ?? 'не найден';
+    $keyboard = getKeyboard('ConfirmOrCancel', $serverId, 'delete');
     $bot->editMessageText($chatId, $idMessage, 'Вы точно хотите удалить сервер? ' . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, null, false, $keyboard);
 }
 
@@ -212,27 +215,17 @@ function deleteServerChecked(Client $bot, string $serverList, int $serverId, int
  */
 function confirmServerAction(Client $bot, string $serverList, int $serverId, int $chatId, int $idMessage, string $type)
 {
-    $serverInfo = preg_grep("/ID: $serverId/", explode("\n\n", $serverList));
-    preg_match('/Имя сервера: (.+)/', reset($serverInfo), $names);
-    $serverName = $names[1] ?? 'не найден';
-    $keyboard = new InlineKeyboardMarkup([
-        [
-            ['text' => "Все сервера", 'callback_data' => 'all_servers']
-        ]
-    ]);
-
-    $message = 'Начинаем перезагружать сервер';
-
-    if ($type == 'delete') {
-        $message = 'Удаляем сервер';
-    }
+    preg_match('/ID: ' . $serverId . '\nИмя сервера: (.+)/', $serverList, $matches);
+    $serverName = $matches[1] ?? 'не найден';
+    $message = ($type == 'delete') ? 'Удаляем сервер' : 'Начинаем перезагружать сервер';
+    $keyboard = getKeyboard('AllServers');
 
     $bot->editMessageText($chatId, $idMessage, $message . ': ' . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, null, false, $keyboard);
     if ($type == 'delete') {
-        handleServerDelete($serverId, TOKEN_REG_RU, URL);
+        // handleServerDelete($serverId, TOKEN_REG_RU, URL);
         return;
     }
-    handleServerReboot($serverId, TOKEN_REG_RU, URL);
+    // handleServerReboot($serverId, TOKEN_REG_RU, URL);
 }
 
 /**
@@ -248,14 +241,6 @@ function confirmServerAction(Client $bot, string $serverList, int $serverId, int
 function canceledServerActions(Client $bot, int $serverId, int $chatId, int $idMessage, string $serverList)
 {
     $serverInfo = preg_grep("/ID: $serverId/", explode("\n\n", $serverList));
-
-    $keyboard = new InlineKeyboardMarkup([
-        [
-            ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-            ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
-        ]
-    ]);
-
-    // Отправляем информацию только о выбранном сервере
+    $keyboard = getKeyboard('DeleteOrReloadServer', $serverId);
     $bot->editMessageText($chatId, $idMessage, reset($serverInfo), null, false, $keyboard);
 }
