@@ -55,6 +55,31 @@ function handleServerReboot(int $serverId, string $token, string $link): string
 }
 
 /**
+ * Обрабатывает запрос на Сброс root-пароля.
+ *
+ * @param int $serverId Идентификатор сервера для перезагрузки.
+ * @param string $token Токен для аутентификации.
+ * @param string $link Ссылка на API сервера.
+ * @return string Результат запроса на перезагрузку.
+ */
+function sendServerPasswordResetRequest(int $serverId, string $token, string $link): string
+{
+    $url = sprintf('%s/%d/actions', $link, $serverId);
+
+    $options = [
+        'http' => [
+            'header'  => "Content-Type: application/json\r\n" .
+                "Authorization: Bearer $token\r\n",
+            'method'  => 'POST',
+            'content' => json_encode(['type' => 'password_reset'])
+        ]
+    ];
+
+    $context  = stream_context_create($options);
+    return file_get_contents($url, false, $context);
+}
+
+/**
  * Отображает список серверов.
  *
  * @param string $token Токен для аутентификации.
@@ -113,8 +138,13 @@ function getKeyboard($typeAction, ?int $serverId = null, ?string $variableAction
     switch ($typeAction) {
         case 'DeleteOrReloadServer':
             return new InlineKeyboardMarkup([
-                [['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
-                ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]]
+                [
+                    ['text' => "🔄 Перезагрузить", 'callback_data' => "reload_server_$serverId"],
+                    ['text' => "❌ Удалить", 'callback_data' => "delete_server_$serverId"]
+                ],
+                [
+                    ['text' => "♻️ Сбросить пароль root", 'callback_data' => "reset_password_server_$serverId"]
+                ]
             ]);
 
         case 'ConfirmOrCancel':
@@ -175,6 +205,25 @@ function pushServersList(Client $bot, int $chatId, string $serverList)
  *
  * @return void
  */
+function resetPasswordServerChecked(Client $bot, string $serverList, int $serverId, int $chatId, int $idMessage)
+{
+    preg_match('/ID: ' . $serverId . '\nИмя сервера: (.+)/', $serverList, $matches);
+    $serverName = $matches[1] ?? 'не найден';
+    $keyboard = getKeyboard('ConfirmOrCancel', $serverId, 'reset');
+    $bot->editMessageText($chatId, $idMessage, 'Точно хотите сбросить пароль Root пользователя? ' . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, null, false, $keyboard);
+}
+
+/**
+ * Запрашивает подтверждение на перезагрузку выбранного сервера.
+ *
+ * @param Client $bot          Объект клиента для редактирования сообщений
+ * @param string $serverList   Список серверов в формате строки
+ * @param int    $serverId     Идентификатор сервера, который требуется перезагрузить
+ * @param int    $chatId       Идентификатор чата, где отображается сообщение с запросом
+ * @param int    $idMessage    Идентификатор сообщения, которое нужно отредактировать
+ *
+ * @return void
+ */
 function reloadServerChecked(Client $bot, string $serverList, int $serverId, int $chatId, int $idMessage)
 {
     preg_match('/ID: ' . $serverId . '\nИмя сервера: (.+)/', $serverList, $matches);
@@ -210,23 +259,45 @@ function deleteServerChecked(Client $bot, string $serverList, int $serverId, int
  * @param int $serverId Идентификатор сервера.
  * @param int $chatId Идентификатор чата.
  * @param int $idMessage Идентификатор сообщения.
- * @param string $type Тип действия ('delete' для удаления, иначе для перезагрузки).
+ * @param string $type Тип действия ('delete' для удаления, 'reset' для сброса, иначе для перезагрузки).
  * @return void
  */
 function confirmServerAction(Client $bot, string $serverList, int $serverId, int $chatId, int $idMessage, string $type)
 {
     preg_match('/ID: ' . $serverId . '\nИмя сервера: (.+)/', $serverList, $matches);
     $serverName = $matches[1] ?? 'не найден';
-    $message = ($type == 'delete') ? 'Удаляем сервер' : 'Начинаем перезагружать сервер';
+    
+    // Определение текста сообщения в зависимости от типа действия
+    switch ($type) {
+        case 'delete':
+            $message = 'Удаляем сервер:';
+            break;
+        case 'reset':
+            $message = 'Отправляем запрос на сброс пароля сервера.'.PHP_EOL.'`По завершению операции на ваш e-mail будет отправлено письмо с новым root-паролем.`';
+            break;
+        default:
+            $message = 'Начинаем перезагружать сервер:';
+            break;
+    }
+    
     $keyboard = getKeyboard('AllServers');
 
-    $bot->editMessageText($chatId, $idMessage, $message . ': ' . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, null, false, $keyboard);
-    if ($type == 'delete') {
-        handleServerDelete($serverId, TOKEN_REG_RU, URL);
-        return;
+    $bot->editMessageText($chatId, $idMessage, $message . PHP_EOL . $serverName . PHP_EOL . 'ID: ' . $serverId, 'Markdown', false, $keyboard);
+    
+    // Обработка действия в зависимости от его типа
+    switch ($type) {
+        case 'delete':
+            handleServerDelete($serverId, TOKEN_REG_RU, URL);
+            break;
+        case 'reset':
+            sendServerPasswordResetRequest($serverId, TOKEN_REG_RU, URL);
+            break;
+        default:
+            handleServerReboot($serverId, TOKEN_REG_RU, URL);
+            break;
     }
-    handleServerReboot($serverId, TOKEN_REG_RU, URL);
 }
+
 
 /**
  * Отменяет действия с сервером и отображает доступные действия.

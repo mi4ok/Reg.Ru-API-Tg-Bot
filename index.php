@@ -55,7 +55,18 @@ try {
                 $serverId = $matches[1];
                 $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
                 canceledServerActions($bot, $serverId, $chatId, $idMessage, $serverList);
+                break;
 
+            case (bool)preg_match('/^reset_password_server_(\d+)$/', $callback_data, $matches):
+                $serverId = $matches[1];
+                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
+                resetPasswordServerChecked($bot, $serverList, $serverId, $chatId, $idMessage);
+                break;
+
+            case (bool)preg_match('/^confirm_reset_server_(\d+)$/', $callback_data, $matches):
+                $serverId = $matches[1];
+                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
+                confirmServerAction($bot, $serverList, $serverId, $chatId, $idMessage, 'reset');
                 break;
 
             default:
