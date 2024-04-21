@@ -9,3 +9,9 @@ https://api.telegram.org/bot{BotToken}/setWebhook?url=https://example.ru/index.p
 ![img.png](img/img1.png)
 
 ![img.png](img/img.png)
+
+
+ToDo:
+1. Избавиться от файла inc/functions.php
+2. Инсталлятор для записи config.php
+3. Разбить ServerManager.

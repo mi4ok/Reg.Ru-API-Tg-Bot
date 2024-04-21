@@ -7,15 +7,17 @@ use TelegramBot\Api\Types\Update;
 require_once "vendor/autoload.php";
 require_once "inc/functions.php";
 require_once "inc/config.php";
+require_once "inc/ServerManager.php";
 
 try {
     $bot = new Client(TG_BOT_TOKEN);
+    $serverManager = new ServerManager(TOKEN_REG_RU, URL, $bot);
 
-    $bot->command('start', function ($message) use ($bot) {
-        sendStartMessage($bot, $message);
+    $bot->command('start', function ($message) use ($serverManager) {
+        $serverManager->sendStartMessage($message);
     });
 
-    $bot->callbackQuery(function (CallbackQuery $callback) use ($bot) {
+    $bot->callbackQuery(function (CallbackQuery $callback) use ($serverManager, $bot) {
         $message = $callback->getMessage();
         $idMessage = $message->getMessageId();
         $chatId = $message->getChat()->getId();
@@ -23,50 +25,50 @@ try {
 
         switch ($callback_data) {
             case 'all_servers':
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                pushServersList($bot, $chatId, $serverList);
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->pushServersList($chatId, $serverList);
                 break;
 
             case (bool)preg_match('/^reload_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                reloadServerChecked($bot, $serverList, $serverId, $chatId, $idMessage);
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->reloadServerChecked($serverList, $serverId, $chatId, $idMessage);
                 break;
 
             case (bool)preg_match('/^delete_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                deleteServerChecked($bot, $serverList, $serverId, $chatId, $idMessage);
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->deleteServerChecked($serverList, $serverId, $chatId, $idMessage);
                 break;
 
             case (bool)preg_match('/^confirm_delete_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                confirmServerAction($bot, $serverList, $serverId, $chatId, $idMessage, 'delete');
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->confirmServerAction($serverList, $serverId, $chatId, $idMessage, 'delete');
                 break;
 
             case (bool)preg_match('/^confirm_reload_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                confirmServerAction($bot, $serverList, $serverId, $chatId, $idMessage, 'reload');
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->confirmServerAction($serverList, $serverId, $chatId, $idMessage, 'reload');
                 break;
 
             case (bool)preg_match('/^cancel_delete_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                canceledServerActions($bot, $serverId, $chatId, $idMessage, $serverList);
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->canceledServerActions($serverId, $chatId, $idMessage, $serverList);
                 break;
 
             case (bool)preg_match('/^reset_password_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                resetPasswordServerChecked($bot, $serverList, $serverId, $chatId, $idMessage);
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->resetPasswordServerChecked($serverList, $serverId, $chatId, $idMessage);
                 break;
 
             case (bool)preg_match('/^confirm_reset_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
-                $serverList = handleServerListRequest(TOKEN_REG_RU, URL);
-                confirmServerAction($bot, $serverList, $serverId, $chatId, $idMessage, 'reset');
+                $serverList = $serverManager->handleServerListRequest();
+                $serverManager->confirmServerAction($serverList, $serverId, $chatId, $idMessage, 'reset');
                 break;
 
             default:
@@ -74,8 +76,8 @@ try {
         }
     });
 
-    $bot->on(function (Update $update) use ($bot) {
-        handleDefaultMessage($bot, $update);
+    $bot->on(function (Update $update) use ($serverManager) {
+        $serverManager->handleDefaultMessage($update);
     }, function () {
         return true;
     });
