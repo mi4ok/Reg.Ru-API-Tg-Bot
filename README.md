@@ -6,14 +6,16 @@
 
 https://api.telegram.org/bot{BotToken}/setWebhook?url=https://example.ru/index.php
 
+## BOT
 ![img.png](img/img1.png)
-
 ![img.png](img/img.png)
+
+## INSTALLER
 ![alt text](img/image1.png)
 ![alt text](img/image2.png)
 ![alt text](img/image3.png)
 
-ToDo:
+## ToDo:
 1. Избавиться от файла inc/functions.php (+)
 2. Инсталлятор для записи config.php (+)
 3. Разбить ServerManager.
