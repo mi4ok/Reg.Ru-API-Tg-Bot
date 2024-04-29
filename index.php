@@ -29,6 +29,10 @@ try {
                 $serverManager->pushServersList($chatId, $serverList);
                 break;
 
+            case 'balance':
+                $serverManager->pushBalance($chatId, $idMessage);
+                break;
+
             case (bool)preg_match('/^reload_server_(\d+)$/', $callback_data, $matches):
                 $serverId = $matches[1];
                 $serverList = $serverManager->handleServerListRequest();

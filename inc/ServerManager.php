@@ -57,6 +57,18 @@ class ServerManager
     }
 
     /**
+     * Получает данные о балансе, выполняя GET-запрос к конечной точке "/balance_data".
+     *
+     * @return string|false Данные о балансе в виде строки, либо false в случае ошибки запроса.
+     */
+    public function handleBalance() 
+    {
+        $newUrl = str_replace("/reglets", "/balance_data", $this->link);
+        $options = $this->getOptions('GET');
+        return file_get_contents($newUrl, false, stream_context_create($options));
+    }
+    
+    /**
      * Обрабатывает запрос на перезагрузку сервера.
      *
      * @param int $serverId ID сервера для перезагрузки.
@@ -147,14 +159,19 @@ class ServerManager
 
             case 'ConfirmOrCancel':
                 return new InlineKeyboardMarkup([
-                    [['text' => "✅ Да", 'callback_data' => "confirm_{$variableAction}_server_$serverId"],
-                    ['text' => "❌ Нет", 'callback_data' => "cancel_delete_server_$serverId"]]
+                    [
+                        ['text' => "✅ Да", 'callback_data' => "confirm_{$variableAction}_server_$serverId"],
+                        ['text' => "❌ Нет", 'callback_data' => "cancel_delete_server_$serverId"]
+                    ]
                 ]);
 
             default:
             case 'AllServers':
                 return new InlineKeyboardMarkup([
-                    [['text' => "Все сервера", 'callback_data' => 'all_servers']]
+                    [
+                        ['text' => "Все сервера", 'callback_data' => 'all_servers'],
+                        ['text' => 'Баланс', 'callback_data' => 'balance']
+                    ]
                 ]);
         }
     }
@@ -191,6 +208,36 @@ class ServerManager
             $keyboard = $this->getKeyboard('DeleteOrReloadServer', $serverId);
             $this->bot->sendMessage($chatId, $server, null, false, null, $keyboard);
         }
+    }
+
+    /**
+     * Получает данные о балансе и отображает их в форматированном сообщении в чате.
+     *
+     * @param int $chatId ID чата, в который будут отправлены данные баланса.
+     * @param int $idMessage ID сообщения для редактирования существующего сообщения.
+     * @throws Exception Если при отправке сообщения произошла ошибка.
+     * @return void
+     */
+    public function pushBalance(int $chatId, int $idMessage)
+    {
+        $keyboard = $this->getKeyboard('AllServers');
+        $balanceData = json_decode($this->handleBalance(), true);
+
+        $message = "*Баланс:* " . ($balanceData['balance_data']['balance'] . ' руб.' ?? 'Не удалось получить данные') . PHP_EOL;
+        $message .= "*Бонусный баланс:* " . ($balanceData['balance_data']['bonus_balance'] ?? 'Не удалось получить данные') . PHP_EOL;
+        $message .= "*Текущих средств хватит на* {$balanceData['balance_data']['days_left']} *дней*" . PHP_EOL;
+        $message .= "*Текущих средств хватит на* {$balanceData['balance_data']['hours_left']} *час(ов) работы*" . PHP_EOL;
+        $message .= "*Сумма списаний всех ресурсов за месяц:* " . $balanceData['balance_data']['monthly_cost'] . PHP_EOL;
+        $message .= PHP_EOL . "*Дочерние услуги:*" . PHP_EOL . PHP_EOL;
+        foreach ($balanceData['balance_data']['detalization'] as $detail) {
+            $message .= "- *{$detail['name']}:* {$detail['plan']}" . PHP_EOL;
+            $message .= "   *Стоимость за месяц:* {$detail['price_month']} руб." . PHP_EOL;
+            $message .= "   *ID сервера:* {$detail['resource_id']}" . PHP_EOL;
+            $message .= "   *Состояние ресурса:* {$detail['state']}" . PHP_EOL;
+            $message .= "   *Стоимость за час:* {$detail['price']} руб." . PHP_EOL;
+            $message .= "   *Тип ресурса:* {$detail['type']}" . PHP_EOL . PHP_EOL;
+        }
+        $this->bot->editMessageText($chatId, $idMessage, $message, 'Markdown', false, $keyboard);
     }
 
     /**
